@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Executive Procurement Monitor | Tring! TBO</title>
+  <meta name="description" content="Monitoring kontrak vendor, alokasi anggaran OPEX/CAPEX, request datamart, dan data audit promo Tring! (TBO, Divisi Digital).">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#06110d">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preload" href="assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script>
+    // Terapkan tema tersimpan sebelum render supaya tidak berkedip.
+    try { var t = localStorage.getItem("tbo-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Lewati ke konten</a>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="#overview" aria-label="Tring! Procurement Monitor">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="40" height="40">
+            <defs>
+              <linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d77a"/><stop offset="1" stop-color="#c8921f"/></linearGradient>
+            </defs>
+            <path d="M20 2.5 35.5 11.5v17L20 37.5 4.5 28.5v-17z" fill="#0b2a1f" stroke="url(#bm)" stroke-width="2"/>
+            <path d="M12.5 15h15M20 15v12" stroke="url(#bm)" stroke-width="3.2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand__text">
+          <strong>Tring! Procurement Monitor</strong>
+          <small>TBO, Divisi Digital Pegadaian</small>
+        </span>
+      </a>
+
+      <div class="topbar__status">
+        <span class="live" id="liveBadge" data-state="loading"><i class="live__dot"></i><span id="liveText">Memuat data</span></span>
+        <span class="sync" id="syncLabel">Sinkronisasi: menunggu</span>
+      </div>
+
+      <div class="topbar__actions">
+        <button class="btn btn--icon" id="refreshBtn" type="button" title="Muat ulang dari Google Sheet" aria-label="Muat ulang data"><i data-icon="refresh-cw"></i></button>
+        <button class="btn btn--icon" id="exportBtn" type="button" title="Ekspor tampilan ini ke CSV" aria-label="Ekspor CSV"><i data-icon="download"></i></button>
+        <button class="btn btn--icon" id="themeBtn" type="button" title="Ganti tema" aria-label="Ganti tema"><i data-icon="sun" id="themeIcon"></i></button>
+        <button class="btn btn--gold" id="insightBtn" type="button"><i data-icon="sparkles"></i><span>AI Insights</span></button>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Bagian dashboard">
+      <span class="tabs__ink" id="tabsInk" aria-hidden="true"></span>
+      <button role="tab" data-tab="overview" type="button"><i data-icon="layout-dashboard"></i><span>Overview</span></button>
+      <button role="tab" data-tab="payments" type="button"><i data-icon="calendar-clock"></i><span>Payment Deadlines</span><b class="tabs__count" id="cnt-payments"></b></button>
+      <button role="tab" data-tab="quota" type="button"><i data-icon="gauge"></i><span>Quota Tracker</span></button>
+      <button role="tab" data-tab="ledger" type="button"><i data-icon="table-2"></i><span>Procurement Ledger</span><b class="tabs__count" id="cnt-ledger"></b></button>
+      <button role="tab" data-tab="anggaran" type="button"><i data-icon="wallet"></i><span>Anggaran</span><b class="tabs__count" id="cnt-anggaran"></b></button>
+      <button role="tab" data-tab="datamart" type="button"><i data-icon="database"></i><span>Request Datamart</span><b class="tabs__count" id="cnt-datamart"></b></button>
+      <button role="tab" data-tab="audit" type="button"><i data-icon="ticket-percent"></i><span>Data Audit Promo</span><b class="tabs__count" id="cnt-audit"></b></button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <div id="banner" aria-live="polite"></div>
+
+    <div class="intro">
+      <h1>Executive Procurement &amp; Datamart Promo Dashboard</h1>
+      <p>Monitoring kontrak vendor, alokasi anggaran OPEX/CAPEX, request datamart, dan data audit promo.</p>
+    </div>
+
+    <!-- ========== OVERVIEW ========== -->
+    <section class="view" id="view-overview" role="tabpanel" aria-label="Overview">
+      <div class="hero">
+        <article class="panel hero__total">
+          <header class="panel__head">
+            <h2>Total nilai kontrak</h2>
+            <span class="chip" id="heroItems">-</span>
+          </header>
+          <div class="hero__value" id="kpiTotalCost" aria-live="polite">Rp 0</div>
+          <div class="split" aria-label="Komposisi OPEX dan CAPEX">
+            <div class="split__bar" id="splitBar"><i class="split__opex"></i><i class="split__capex"></i></div>
+            <dl class="split__legend">
+              <div><dt><i class="swatch swatch--opex"></i>OPEX</dt><dd id="kpiOpex">Rp 0</dd></div>
+              <div><dt><i class="swatch swatch--capex"></i>CAPEX</dt><dd id="kpiCapex">Rp 0</dd></div>
+            </dl>
+          </div>
+          <p class="hero__next" id="heroNext"></p>
+        </article>
+
+        <div class="kpis">
+          <button class="panel kpi" type="button" data-action="goto-ledger">
+            <span class="kpi__icon"><i data-icon="layers"></i></span>
+            <span class="kpi__label">Total item pengadaan</span>
+            <span class="kpi__value" id="kpiTotalItems">0</span>
+            <span class="kpi__sub" id="kpiRkfBreakdown">RKF: 0 dan Non-RKF: 0</span>
+          </button>
+          <button class="panel kpi kpi--danger" type="button" data-action="goto-urgent">
+            <span class="kpi__icon"><i data-icon="shield-alert"></i></span>
+            <span class="kpi__label">Jatuh tempo urgent</span>
+            <span class="kpi__value" id="kpiUrgentCount">0</span>
+            <span class="kpi__sub" id="kpiUrgentSub">30 hari ke depan atau terlambat</span>
+          </button>
+          <button class="panel kpi kpi--info" type="button" data-action="goto-ongoing">
+            <span class="kpi__icon"><i data-icon="activity"></i></span>
+            <span class="kpi__label">Status on going</span>
+            <span class="kpi__value" id="kpiOngoingCount">0</span>
+            <span class="kpi__sub">Pekerjaan yang sedang berjalan</span>
+          </button>
+          <button class="panel kpi kpi--ok" type="button" data-action="goto-rkf">
+            <span class="kpi__icon"><i data-icon="flag"></i></span>
+            <span class="kpi__label">Status proyek RKF</span>
+            <span class="kpi__value" id="kpiRkfOngoing">0</span>
+            <span class="kpi__sub" id="kpiRkfSub">0 belum mulai, 0 selesai</span>
+          </button>
+        </div>
+      </div>
+
+      <section class="panel runway" aria-labelledby="runwayTitle">
+        <header class="panel__head panel__head--wrap">
+          <div>
+            <h2 id="runwayTitle">Runway kontrak</h2>
+            <p class="muted" id="runwaySub">Kapan setiap kontrak mulai dan berakhir, dihitung dari hari ini.</p>
+          </div>
+          <ul class="legend" aria-label="Keterangan warna runway">
+            <li><i class="swatch swatch--danger"></i>Urgent atau terlambat</li>
+            <li><i class="swatch swatch--warn"></i>31 sampai 60 hari</li>
+            <li><i class="swatch swatch--ok"></i>Aman</li>
+            <li><i class="swatch swatch--muted"></i>Berakhir</li>
+            <li><i class="swatch swatch--open"></i>End date kosong</li>
+          </ul>
+        </header>
+        <div class="runway__scroll"><div id="runway" class="runway__grid"></div></div>
+        <p class="muted runway__note" id="runwayNote"></p>
+      </section>
+
+      <div class="charts">
+        <article class="panel">
+          <header class="panel__head"><h2>Alokasi budgeting per vendor</h2><span class="muted">Nilai kontrak tertinggi</span></header>
+          <div class="chartbox"><canvas id="vendorChart" role="img" aria-label="Grafik batang nilai kontrak per vendor"></canvas></div>
+          <div id="vendorTable"></div>
+        </article>
+        <article class="panel">
+          <header class="panel__head"><h2>Proporsi status pelaksanaan proyek</h2></header>
+          <div class="donut">
+            <div class="chartbox chartbox--donut"><canvas id="statusChart" role="img" aria-label="Grafik donat proporsi status proyek"></canvas><div class="donut__center" id="donutCenter"></div></div>
+            <ul class="donut__legend" id="statusLegend"></ul>
+          </div>
+          <div id="statusTable"></div>
+        </article>
+      </div>
+
+      <section class="block" aria-labelledby="critTitle">
+        <header class="block__head">
+          <div>
+            <h2 id="critTitle">Critical payment deadlines &amp; schedule kontrak</h2>
+            <p class="muted">Tiga kontrak dengan tenggat paling dekat. Cari untuk melihat semuanya.</p>
+          </div>
+          <div class="block__tools">
+            <label class="search"><i data-icon="search"></i><input type="search" data-f="overview.q" placeholder="Cari proker, vendor, PIC" aria-label="Cari jadwal kontrak"></label>
+            <button class="btn" type="button" data-action="goto-payments">Lihat semua jadwal<i data-icon="chevron-right"></i></button>
+          </div>
+        </header>
+        <div class="cards" id="overviewCards"><div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div></div>
+      </section>
+    </section>
+
+    <!-- ========== PAYMENT DEADLINES ========== -->
+    <section class="view" id="view-payments" role="tabpanel" aria-label="Payment Deadlines" hidden>
+      <header class="block__head">
+        <div>
+          <h2>Schedule &amp; prioritas jatuh tempo pembayaran</h2>
+          <p class="muted">Pantau BAST, verifikasi SPK, status pekerjaan, dan dokumen penagihan.</p>
+        </div>
+      </header>
+      <div class="toolbar">
+        <label class="search"><i data-icon="search"></i><input type="search" data-f="payments.q" placeholder="Cari proker, task, vendor, PIC, output" aria-label="Cari jadwal"></label>
+        <label class="select"><span>Status</span><select data-f="payments.status" id="selPayStatus"></select></label>
+        <label class="select"><span>Kategori</span>
+          <select data-f="payments.rkf"><option value="ALL">Semua</option><option value="RKF">Hanya RKF</option><option value="Non-RKF">Hanya Non-RKF</option></select></label>
+        <label class="select"><span>Deadline</span>
+          <select data-f="payments.pri" id="selPayPri">
+            <option value="ALL">Semua waktu</option><option value="overdue">Terlambat</option><option value="urgent">Urgent (30 hari atau kurang)</option>
+            <option value="upcoming">Soon (31 sampai 60 hari)</option><option value="safe">Safe (lebih dari 60 hari)</option>
+            <option value="nodate">End date belum diisi</option><option value="ended">Sudah berakhir</option></select></label>
+      </div>
+      <p class="count" id="payCount" aria-live="polite"></p>
+      <div class="cards" id="paymentCards"></div>
+    </section>
+
+    <!-- ========== QUOTA TRACKER ========== -->
+    <section class="view" id="view-quota" role="tabpanel" aria-label="Quota Tracker" hidden>
+      <header class="block__head">
+        <div>
+          <h2>3rd party API service quota &amp; usage</h2>
+          <p class="muted">Pantau kuota OCR KTP, Liveness, Face Compare, dan Gateway.</p>
+        </div>
+      </header>
+      <div class="toolbar">
+        <label class="search"><i data-icon="search"></i><input type="search" data-f="quota.q" placeholder="Cari layanan atau vendor" aria-label="Cari kuota"></label>
+        <label class="select"><span>Tahun</span><select data-f="quota.year" id="selQuotaYear"></select></label>
+        <label class="select"><span>Status</span><select data-f="quota.status" id="selQuotaStatus"></select></label>
+        <label class="select"><span>Tipe</span><select data-f="quota.tipe" id="selQuotaTipe"></select></label>
+        <label class="select"><span>Kategori</span>
+          <select data-f="quota.rkf"><option value="ALL">Semua</option><option value="RKF">RKF only</option><option value="Non-RKF">Non-RKF only</option></select></label>
+      </div>
+      <div class="cards cards--quota" id="quotaCards"></div>
+    </section>
+
+    <!-- ========== PROCUREMENT LEDGER ========== -->
+    <section class="view" id="view-ledger" role="tabpanel" aria-label="Procurement Ledger" hidden>
+      <header class="block__head">
+        <div>
+          <h2>Live procurement ledger</h2>
+          <p class="muted">Seluruh pekerjaan, vendor, nilai, jadwal, dan tindak lanjutnya. Klik baris untuk detail.</p>
+        </div>
+      </header>
+      <div class="toolbar">
+        <label class="search"><i data-icon="search"></i><input type="search" data-f="ledger.q" placeholder="Cari nama proker, task, vendor, PIC, output" aria-label="Cari ledger"></label>
+        <label class="select"><span>Tahun</span><select data-f="ledger.year" id="selLedgerYear"></select></label>
+        <label class="select"><span>Status</span><select data-f="ledger.status" id="selLedgerStatus"></select></label>
+        <label class="select"><span>Kategori</span>
+          <select data-f="ledger.rkf"><option value="ALL">Semua</option><option value="RKF">RKF</option><option value="Non-RKF">Non-RKF</option></select></label>
+      </div>
+      <div class="tablewrap">
+        <table class="table" id="ledgerTable">
+          <thead><tr>
+            <th class="c">ID</th><th class="c">Tahun</th><th>Project / Task</th><th>Output project</th><th>Vendor &amp; PIC</th>
+            <th class="r">Nilai kontrak</th><th>Schedule</th><th class="c">Status</th><th class="c">Dokumen</th><th>Next action</th><th class="c">Aksi</th>
+          </tr></thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+      <p class="count" id="ledgerCount" aria-live="polite"></p>
+    </section>
+
+    <!-- ========== ANGGARAN ========== -->
+    <section class="view" id="view-anggaran" role="tabpanel" aria-label="Anggaran" hidden>
+      <div class="kpis kpis--4">
+        <article class="panel kpi kpi--static"><span class="kpi__icon"><i data-icon="coins"></i></span><span class="kpi__label">Total anggaran 2026</span><span class="kpi__value kpi__value--money" id="kpiAng2026">Rp 0</span><span class="kpi__sub" id="kpiAngSplit"></span></article>
+        <article class="panel kpi kpi--static kpi--info"><span class="kpi__icon"><i data-icon="trending-up"></i></span><span class="kpi__label">Forecasting cost 2027</span><span class="kpi__value kpi__value--money" id="kpiAng2027">Rp 0</span><span class="kpi__sub">Estimasi kebutuhan biaya</span></article>
+        <article class="panel kpi kpi--static kpi--warn"><span class="kpi__icon"><i data-icon="activity"></i></span><span class="kpi__label">Kenaikan 2026 ke 2027</span><span class="kpi__value" id="kpiAngGrowth">0%</span><span class="kpi__sub" id="kpiAngDiff"></span></article>
+        <article class="panel kpi kpi--static kpi--ok"><span class="kpi__icon"><i data-icon="layers"></i></span><span class="kpi__label">Total item anggaran</span><span class="kpi__value" id="kpiAngItems">0</span><span class="kpi__sub">Pekerjaan atau brand IT</span></article>
+      </div>
+      <article class="panel">
+        <header class="panel__head panel__head--wrap"><h2>Cost 2026 dibanding forecast 2027</h2>
+          <ul class="legend"><li><i class="swatch swatch--c2"></i>Cost 2026</li><li><i class="swatch swatch--c3"></i>Forecast 2027</li></ul></header>
+        <div class="chartbox chartbox--tall"><canvas id="budgetChart" role="img" aria-label="Grafik batang cost 2026 dan forecast 2027 per item"></canvas></div>
+        <div id="budgetTable"></div>
+      </article>
+      <div class="toolbar">
+        <label class="search"><i data-icon="search"></i><input type="search" data-f="anggaran.q" placeholder="Cari produk atau mata anggaran" aria-label="Cari anggaran"></label>
+        <div class="seg" role="group" aria-label="Jenis anggaran" id="segAnggaran">
+          <button type="button" data-seg="anggaran.type" data-v="ALL">Semua</button>
+          <button type="button" data-seg="anggaran.type" data-v="OPEX">OPEX</button>
+          <button type="button" data-seg="anggaran.type" data-v="CAPEX">CAPEX</button>
+        </div>
+      </div>
+      <div class="tablewrap">
+        <table class="table">
+          <thead><tr><th class="c">No</th><th>Produk / brand / pekerjaan</th><th class="c">Tipe anggaran</th><th class="c">Mata anggaran</th><th class="r">Cost 2026</th><th class="r">Forecast 2027</th><th class="r">Estimasi pertumbuhan</th></tr></thead>
+          <tbody id="anggaranBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== REQUEST DATAMART ========== -->
+    <section class="view" id="view-datamart" role="tabpanel" aria-label="Request Datamart" hidden>
+      <div class="kpis kpis--4">
+        <article class="panel kpi kpi--static"><span class="kpi__icon"><i data-icon="ticket-percent"></i></span><span class="kpi__label">Total request datamart</span><span class="kpi__value" id="kpiDmTotal">0</span><span class="kpi__sub">Tiket service desk</span></article>
+        <article class="panel kpi kpi--static kpi--ok"><span class="kpi__icon"><i data-icon="circle-check"></i></span><span class="kpi__label">Done &amp; table ready</span><span class="kpi__value" id="kpiDmDone">0</span><span class="kpi__sub">Table siap dipakai</span></article>
+        <article class="panel kpi kpi--static kpi--info"><span class="kpi__icon"><i data-icon="hourglass"></i></span><span class="kpi__label">On going / review</span><span class="kpi__value" id="kpiDmProgress">0</span><span class="kpi__sub">Menunggu proses</span></article>
+        <article class="panel kpi kpi--static kpi--danger"><span class="kpi__icon"><i data-icon="circle-x"></i></span><span class="kpi__label">Rejected / revisi</span><span class="kpi__value" id="kpiDmRejected">0</span><span class="kpi__sub">Perlu tindak lanjut</span></article>
+      </div>
+      <div class="toolbar">
+        <label class="search"><i data-icon="search"></i><input type="search" data-f="datamart.q" placeholder="Cari tiket, nama, output, atau table" aria-label="Cari datamart"></label>
+        <div class="seg" role="group" aria-label="Status tiket" id="segDatamart">
+          <button type="button" data-seg="datamart.state" data-v="ALL">Semua</button>
+          <button type="button" data-seg="datamart.state" data-v="done">Done</button>
+          <button type="button" data-seg="datamart.state" data-v="progress">Progress</button>
+          <button type="button" data-seg="datamart.state" data-v="rejected">Rejected</button>
+        </div>
+        <button class="btn" type="button" data-action="export"><i data-icon="download"></i>Export CSV</button>
+      </div>
+      <div class="tablewrap">
+        <table class="table">
+          <thead><tr><th class="c">No</th><th class="c">ID tiket</th><th>Nama permintaan &amp; output</th><th class="c">Service desk</th><th>Status / table datamart BigQuery</th><th>Keterangan status</th></tr></thead>
+          <tbody id="datamartBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== DATA AUDIT PROMO ========== -->
+    <section class="view" id="view-audit" role="tabpanel" aria-label="Data Audit Promo" hidden>
+      <header class="block__head">
+        <div>
+          <h2>Data audit promo</h2>
+          <p class="muted" id="auditSummary">Kode promo, dokumen pendukung, dan penyerapan budgeting.</p>
+        </div>
+      </header>
+      <div class="toolbar">
+        <label class="search"><i data-icon="search"></i><input type="search" data-f="audit.q" placeholder="Cari nama, deskripsi, atau kode promo" aria-label="Cari promo"></label>
+        <button class="btn" type="button" data-action="export"><i data-icon="download"></i>Export CSV</button>
+      </div>
+      <div class="tablewrap">
+        <table class="table">
+          <thead><tr><th class="c">No</th><th>Nama promo</th><th>Deskripsi</th><th>Kode promo</th><th class="c">Link dokumen</th><th class="r">Budgeting</th><th class="r">Penyerapan budgeting</th><th class="c">Aksi</th></tr></thead>
+          <tbody id="auditBody"></tbody>
+        </table>
+      </div>
+      <p class="count" id="auditCount" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Data diambil langsung dari Google Sheet dan diperbarui otomatis tiap 5 menit.</span>
+  </footer>
+
+  <!-- ========== DIALOGS ========== -->
+  <dialog id="projectDialog" class="dialog" aria-labelledby="pdTitle">
+    <form method="dialog" class="dialog__close"><button class="btn btn--icon" aria-label="Tutup"><i data-icon="x"></i></button></form>
+    <div id="projectBody"></div>
+  </dialog>
+
+  <dialog id="promoDialog" class="dialog" aria-labelledby="prTitle">
+    <form method="dialog" class="dialog__close"><button class="btn btn--icon" aria-label="Tutup"><i data-icon="x"></i></button></form>
+    <div id="promoBody"></div>
+  </dialog>
+
+  <dialog id="insightDialog" class="dialog dialog--wide" aria-labelledby="inTitle">
+    <form method="dialog" class="dialog__close"><button class="btn btn--icon" aria-label="Tutup"><i data-icon="x"></i></button></form>
+    <div id="insightBody"></div>
+  </dialog>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+  <script src="assets/vendor/chart.umd.min.js"></script>
+  <script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
