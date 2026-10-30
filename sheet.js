@@ -305,7 +305,7 @@ async function fetchTab(sheetId, tabName) {
 }
 
 async function loadAll(env = process.env) {
-  const sheetId = env.SHEET_ID;
+  const sheetId = env.SHEET_ID || "1MgeRBXOfYrK3aN3sMhodMwxmJjX7OOlRqNYOZ-H3gpA";
   if (!sheetId) throw new Error("Environment variable SHEET_ID belum diisi di Vercel.");
   const tabs = {
     procurement: env.TAB_PROCUREMENT || "DATA_PENGADAAN",
